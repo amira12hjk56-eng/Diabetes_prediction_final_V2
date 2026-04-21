@@ -1,33 +1,46 @@
 import streamlit as st
 import pickle
 import numpy as np
+import os
 
-# الكود ده متعدل بالأسماء اللي في صورتك الأولى بالظبط
-try:
-    # بنجرب نفتح الملف بالاسم اللي فيه (1)
-    model = pickle.load(open('diabetes_model (1).pkl', 'rb'))
-    scaler = pickle.load(open('final_scaler (1).pkl', 'rb'))
-except Exception as e:
-    st.error(f"Error: {e}")
-    st.write("تأكدي إن الأسماء دي موجودة في GitHub: 'diabetes_model (1).pkl' و 'final_scaler (1).pkl'")
+# دالة للبحث عن ملف الموديل بأي اسم متاح
+def load_file(possible_names):
+    for name in possible_names:
+        if os.path.exists(name):
+            return pickle.load(open(name, 'rb'))
+    return None
 
 st.title('Diabetes Prediction System')
 
-pregnancies = st.number_input('Pregnancies', value=0)
-glucose = st.number_input('Glucose', value=0)
-blood_pressure = st.number_input('Blood Pressure', value=0)
-skin_thickness = st.number_input('Skin Thickness', value=0)
-insulin = st.number_input('Insulin', value=0)
-bmi = st.number_input('BMI', value=0.0)
-dpf = st.number_input('Diabetes Pedigree Function', value=0.0)
-age = st.number_input('Age', value=0)
+# محاولة تحميل الملفات بكل الأسامي اللي ظهرت في الصور
+model = load_file(['diabetes_model (1).pkl', 'diabetes_model.pkl', 'final_diabetes_model.pkl'])
+scaler = load_file(['final_scaler (1).pkl', 'scaler.pkl', 'final_scaler.pkl'])
 
-if st.button('Predict'):
-    input_data = np.array([pregnancies, glucose, blood_pressure, skin_thickness, insulin, bmi, dpf, age]).reshape(1, -1)
-    input_scaled = scaler.transform(input_data)
-    prediction = model.predict(input_scaled)
-    
-    if prediction[0] == 1:
-        st.error('مصاب بالسكري')
-    else:
-        st.success('سليم')
+if model is None or scaler is None:
+    st.error("⚠️ مشكلة في ملفات الموديل: تأكدي إن ملفات الـ .pkl مرفوعة على GitHub في نفس الفولدر مع app.py")
+else:
+    # المدخلات
+    col1, col2 = st.columns(2)
+    with col1:
+        pregnancies = st.number_input('Pregnancies', min_value=0)
+        glucose = st.number_input('Glucose', min_value=0)
+        bp = st.number_input('Blood Pressure', min_value=0)
+        skin = st.number_input('Skin Thickness', min_value=0)
+    with col2:
+        insulin = st.number_input('Insulin', min_value=0)
+        bmi = st.number_input('BMI', min_value=0.0)
+        dpf = st.number_input('Diabetes Pedigree Function', min_value=0.0)
+        age = st.number_input('Age', min_value=0)
+
+    if st.button('Predict'):
+        # الحل التقني لمشكلة الـ ValueError (Reshape)
+        input_data = np.array([pregnancies, glucose, bp, skin, insulin, bmi, dpf, age]).reshape(1, -1)
+        
+        # عمل التحجيم والتوقع
+        input_scaled = scaler.transform(input_data)
+        prediction = model.predict(input_scaled)
+        
+        if prediction[0] == 1:
+            st.error('النتيجة: الشخص مصاب بالسكري')
+        else:
+            st.success('النتيجة: الشخص سليم')
