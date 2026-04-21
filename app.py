@@ -24,7 +24,7 @@ st.markdown("""
         border-radius: 10px;
     }
     </style>
-    """, unsafe_allow_safe=True)
+    """, unsafe_allow_html=True)
 
 st.title("🩺 نظام التنبؤ الذكي بمخاطر السكري")
 st.write("أدخلي بيانات المريض بدقة للحصول على تقييم المخاطر:")
