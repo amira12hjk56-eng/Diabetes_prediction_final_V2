@@ -3,44 +3,52 @@ import pickle
 import numpy as np
 import os
 
-# دالة للبحث عن ملف الموديل بأي اسم متاح
-def load_file(possible_names):
-    for name in possible_names:
-        if os.path.exists(name):
-            return pickle.load(open(name, 'rb'))
+# الدالة دي بتدور على أي ملف موديل أو سكيلر موجود في الفولدر عندك
+def load_res(patterns):
+    for file in os.listdir('.'):
+        for p in patterns:
+            if p in file and file.endswith('.pkl'):
+                return pickle.load(open(file, 'rb'))
     return None
 
-st.title('Diabetes Prediction System')
+st.set_page_config(page_title="Diabetes Prediction", layout="centered")
+st.title('🏥 Diabetes Prediction System')
 
-# محاولة تحميل الملفات بكل الأسامي اللي ظهرت في الصور
-model = load_file(['diabetes_model (1).pkl', 'diabetes_model.pkl', 'final_diabetes_model.pkl'])
-scaler = load_file(['final_scaler (1).pkl', 'scaler.pkl', 'final_scaler.pkl'])
+# الكود هيدور بنفسه على الملفات اللي آخرها pkl
+model = load_res(['model', 'diabetes'])
+scaler = load_res(['scaler', 'final_scaler'])
 
 if model is None or scaler is None:
-    st.error("⚠️ مشكلة في ملفات الموديل: تأكدي إن ملفات الـ .pkl مرفوعة على GitHub في نفس الفولدر مع app.py")
+    st.error("❌ مشكلة في الملفات: تأكدي إنك رفعتي ملف الموديل والـ scaler بصيغة .pkl")
 else:
-    # المدخلات
+    st.info("✅ تم تحميل الموديل والـ Scaler بنجاح")
+    
+    # تقسيم المدخلات بشكل منظم
     col1, col2 = st.columns(2)
     with col1:
-        pregnancies = st.number_input('Pregnancies', min_value=0)
-        glucose = st.number_input('Glucose', min_value=0)
+        preg = st.number_input('Pregnancies', min_value=0)
+        glu = st.number_input('Glucose', min_value=0)
         bp = st.number_input('Blood Pressure', min_value=0)
         skin = st.number_input('Skin Thickness', min_value=0)
     with col2:
-        insulin = st.number_input('Insulin', min_value=0)
+        ins = st.number_input('Insulin', min_value=0)
         bmi = st.number_input('BMI', min_value=0.0)
-        dpf = st.number_input('Diabetes Pedigree Function', min_value=0.0)
+        dpf = st.number_input('DPF', min_value=0.0)
         age = st.number_input('Age', min_value=0)
 
-    if st.button('Predict'):
-        # الحل التقني لمشكلة الـ ValueError (Reshape)
-        input_data = np.array([pregnancies, glucose, bp, skin, insulin, bmi, dpf, age]).reshape(1, -1)
+    if st.button('Predict Now / ابدأ الفحص'):
+        # تحويل المدخلات لمصفوفة وعمل Reshape عشان نمنع الـ ValueError
+        features = np.array([preg, glu, bp, skin, ins, bmi, dpf, age]).reshape(1, -1)
         
-        # عمل التحجيم والتوقع
-        input_scaled = scaler.transform(input_data)
-        prediction = model.predict(input_scaled)
-        
-        if prediction[0] == 1:
-            st.error('النتيجة: الشخص مصاب بالسكري')
-        else:
-            st.success('النتيجة: الشخص سليم')
+        # تنفيذ التحجيم والتوقع
+        try:
+            scaled_data = scaler.transform(features)
+            prediction = model.predict(scaled_data)
+            
+            st.markdown("---")
+            if prediction[0] == 1:
+                st.error('⚠️ النتيجة: الشخص قد يكون مصاباً بالسكري')
+            else:
+                st.success('✨ النتيجة: الشخص سليم والحمد لله')
+        except Exception as e:
+            st.error(f"حصلت مشكلة أثناء الحساب: {e}")
