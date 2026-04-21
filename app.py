@@ -2,34 +2,32 @@ import streamlit as st
 import pickle
 import numpy as np
 
-# تحميل الموديل والـ Scaler
-# ملحوظة: تأكدي أن الأسماء دي بالظبط هي اللي موجودة في ملفاتك على غيت هاب
-model = pickle.load(open('diabetes_model.pkl', 'rb'))
-scaler = pickle.load(open('scaler.pkl', 'rb'))
+# الكود ده متعدل بالأسماء اللي في صورتك الأولى بالظبط
+try:
+    # بنجرب نفتح الملف بالاسم اللي فيه (1)
+    model = pickle.load(open('diabetes_model (1).pkl', 'rb'))
+    scaler = pickle.load(open('final_scaler (1).pkl', 'rb'))
+except Exception as e:
+    st.error(f"Error: {e}")
+    st.write("تأكدي إن الأسماء دي موجودة في GitHub: 'diabetes_model (1).pkl' و 'final_scaler (1).pkl'")
 
 st.title('Diabetes Prediction System')
 
-# مدخلات المستخدم
-pregnancies = st.number_input('Pregnancies')
-glucose = st.number_input('Glucose')
-blood_pressure = st.number_input('Blood Pressure')
-skin_thickness = st.number_input('Skin Thickness')
-insulin = st.number_input('Insulin')
-bmi = st.number_input('BMI')
-dpf = st.number_input('Diabetes Pedigree Function')
-age = st.number_input('Age')
+pregnancies = st.number_input('Pregnancies', value=0)
+glucose = st.number_input('Glucose', value=0)
+blood_pressure = st.number_input('Blood Pressure', value=0)
+skin_thickness = st.number_input('Skin Thickness', value=0)
+insulin = st.number_input('Insulin', value=0)
+bmi = st.number_input('BMI', value=0.0)
+dpf = st.number_input('Diabetes Pedigree Function', value=0.0)
+age = st.number_input('Age', value=0)
 
 if st.button('Predict'):
-    # تجميع البيانات في مصفوفة وعمل Reshape (هذا هو الحل)
     input_data = np.array([pregnancies, glucose, blood_pressure, skin_thickness, insulin, bmi, dpf, age]).reshape(1, -1)
-    
-    # تحويل البيانات باستخدام الـ Scaler
     input_scaled = scaler.transform(input_data)
-    
-    # التوقع
     prediction = model.predict(input_scaled)
     
     if prediction[0] == 1:
-        st.error('Positive: The person might have diabetes.')
+        st.error('مصاب بالسكري')
     else:
-        st.success('Negative: The person is likely healthy.')
+        st.success('سليم')
