@@ -1,60 +1,70 @@
 import streamlit as st
 import joblib
+import numpy as np
 
-# 1. تحميل الموديل
-model = joblib.load('diabetes_model.pkl')
+# تحميل الموديل والـ Scaler
+# تأكدي من مطابقة الأسماء للملفات المرفوعة على GitHub
+model = joblib.load('final_diabetes_model.pkl')
+scaler = joblib.load('final_scaler (1).pkl')
 
-# 2. قاموس الترجمة الشامل
-result_map = {
-    'Normal': 'طبيعي (سليم) ✅',
-    'Prediabetics': 'مرحلة ما قبل السكري ⚠️',
-    'Prediabetes': 'مرحلة ما قبل السكري ⚠️',
-    'Diabetics': 'مصاب بالسكري 🩺',
-    'Diabetic': 'مصاب بالسكري 🩺'
-}
+# إعدادات الصفحة
+st.set_page_config(page_title="نظام التنبؤ بمخاطر السكري", layout="wide")
 
-st.set_page_config(page_title="توقع السكري", layout="wide")
-st.title("نظام التنبؤ بمخاطر السكري 🩺")
-st.markdown("---")
+# إضافة تنسيق CSS لتغيير الألوان والخلفية
+st.markdown("""
+    <style>
+    .main {
+        background-color: #f5f7f9;
+    }
+    .stButton>button {
+        width: 100%;
+        background-color: #007bff;
+        color: white;
+        height: 3em;
+        border-radius: 10px;
+    }
+    </style>
+    """, unsafe_allow_safe=True)
 
-# 3. تنظيم الـ 17 خانة في 3 أعمدة
-col1, col2, col3 = st.columns(3)
+st.title("🩺 نظام التنبؤ الذكي بمخاطر السكري")
+st.write("أدخلي بيانات المريض بدقة للحصول على تقييم المخاطر:")
+
+# تقسيم المدخلات لعمودين عشان الشكل يبقى أرتب
+col1, col2 = st.columns(2)
 
 with col1:
-    age = st.number_input("العمر", min_value=1, value=25)
-    gender = st.selectbox("النوع", options=['Male', 'Female'], format_func=lambda x: 'ذكر' if x == 'Male' else 'أنثى')
-    bmi = st.number_input("مؤشر كتلة الجسم (BMI)", value=25.0)
+    age = st.number_input("العمر", min_value=1, max_value=100, value=25)
+    gender = st.selectbox("النوع", ["ذكر", "أنثى"])
+    bmi = st.number_input("(BMI) مؤشر كتلة الجسم", value=25.0)
     blood_pressure = st.number_input("ضغط الدم", value=120)
     glucose = st.number_input("مستوى الجلوكوز", value=100)
-    insulin = st.number_input("مستوى الإنسولين", value=15)
 
 with col2:
-    hba1c = st.number_input("مستوى HbA1c", value=5.5)
-    chol = st.number_input("الكوليسترول", value=180)
-    trig = st.number_input("الدهون الثلاثية", value=130)
-    activity = st.selectbox("مستوى النشاط البدني (0-3)", options=[0, 1, 2, 3])
+    hba1c = st.number_input("HbA1c مستوى", value=5.5)
+    cholesterol = st.number_input("الكوليسترول", value=180)
+    triglycerides = st.number_input("الدهون الثلاثية", value=130)
+    activity = st.slider("مستوى النشاط البدني (0-3)", 0, 3, 1)
     calories = st.number_input("السعرات اليومية", value=2000)
-    sugar = st.number_input("كمية السكر اليومية", value=30)
 
-with col3:
-    sleep = st.number_input("ساعات النوم", value=7)
-    stress = st.number_input("مستوى التوتر (1-10)", value=5)
-    family = st.selectbox("تاريخ العائلة مع السكري", options=['Yes', 'No'], format_func=lambda x: 'نعم' if x == 'Yes' else 'لا')
-    waist = st.number_input("محيط الخصر (سم)", value=85)
-    score = st.number_input("درجة خطر سابقة", value=50)
+st.divider()
 
-st.markdown("---")
-
-if st.button("توقع النتيجة الآن"):
-    g_enc = 1 if gender == 'Male' else 0
-    f_enc = 1 if family == 'Yes' else 0
+# زر التوقع
+if st.button("تحليل الحالة الآن"):
+    # تحويل النوع لرقم (مثلاً ذكر=1، أنثى=0) حسب تدريب الموديل عندك
+    gender_numeric = 1 if gender == "ذكر" else 0
     
-    # إرسال الـ 17 قيمة للموديل
-    data = [[age, g_enc, bmi, blood_pressure, glucose, insulin, hba1c, chol, trig, 
-             activity, calories, sugar, sleep, stress, f_enc, waist, score]]
+    # تجميع البيانات (الترتيب لازم يطابق ترتيب الأعمدة في ملف الإكسيل الأصلي)
+    input_data = np.array([[age, gender_numeric, bmi, blood_pressure, glucose, hba1c, cholesterol, triglycerides, activity, calories]])
     
-    pred = model.predict(data)[0]
-    res = result_map.get(pred, pred)
+    # عمل Scaling
+    input_scaled = scaler.transform(input_data)
     
-    st.info("نتيجة التحليل:")
-    st.subheader(f"التوقع هو: {res}")
+    # التوقع
+    prediction = model.predict(input_scaled)
+    
+    # عرض النتيجة بشكل جمالي
+    st.subheader("النتيجة التحليلية:")
+    if "High" in str(prediction[0]):
+        st.error(f"⚠️ تنبيه: مستوى المخاطر هو ({prediction[0]}) - يرجى مراجعة الطبيب.")
+    else:
+        st.success(f"✅ مطمئن: مستوى المخاطر هو ({prediction[0]}) - استمر في نمط حياة صحي.")
