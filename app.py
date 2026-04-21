@@ -1,45 +1,60 @@
-
 import streamlit as st
 import joblib
-import numpy as np
-import pandas as pd
 
-# 1. تحميل الموديل والـ Scaler
-# تأكدي أن الأسماء مطابقة للملفات اللي حفظناها
-model = joblib.load('final_diabetes_model.pkl')
-scaler = joblib.load('final_scaler.pkl')
+# 1. تحميل الموديل
+model = joblib.load('diabetes_model.pkl')
 
-st.set_page_config(page_title="Diabetes Risk Detector", layout="centered")
+# 2. قاموس الترجمة الشامل
+result_map = {
+    'Normal': 'طبيعي (سليم) ✅',
+    'Prediabetics': 'مرحلة ما قبل السكري ⚠️',
+    'Prediabetes': 'مرحلة ما قبل السكري ⚠️',
+    'Diabetics': 'مصاب بالسكري 🩺',
+    'Diabetic': 'مصاب بالسكري 🩺'
+}
 
-st.title("🩺 Smart Detection of Diabetes Risk")
-st.write("Please enter the patient's data to predict the risk level:")
+st.set_page_config(page_title="توقع السكري", layout="wide")
+st.title("نظام التنبؤ بمخاطر السكري 🩺")
+st.markdown("---")
 
-# 2. إنشاء خانات الإدخال (الترتيب مهم جداً بناءً على الأعمدة في X)
-# ملحوظة: الترتيب هنا لازم يطابق ترتيب الأعمدة اللي الموديل اتدرب عليها
-age = st.number_input("Age", min_value=1, max_value=100, value=30)
-bmi = st.number_input("BMI", min_value=10.0, max_value=60.0, value=25.0)
-fasting_glucose = st.number_input("Fasting Glucose Level", value=100.0)
-hba1c = st.number_input("HbA1c Level", value=5.5)
-blood_pressure = st.number_input("Blood Pressure", value=120)
-waist = st.number_input("Waist Circumference (cm)", value=80.0)
-diabetes_score = st.number_input("Diabetes Risk Score", value=50.0)
+# 3. تنظيم الـ 17 خانة في 3 أعمدة
+col1, col2, col3 = st.columns(3)
 
-# 3. زرار التوقع
-if st.button("Predict Risk Level"):
-    # تجميع البيانات في مصفوفة (Array) بنفس ترتيب الأعمدة في ملف الإكسيل
-    # تأكدي من إضافة باقي الأعمدة لو كانت موجودة في الـ X بتاعك
-    input_data = np.array([[age, bmi, blood_pressure, fasting_glucose, hba1c, waist, diabetes_score]])
+with col1:
+    age = st.number_input("العمر", min_value=1, value=25)
+    gender = st.selectbox("النوع", options=['Male', 'Female'], format_func=lambda x: 'ذكر' if x == 'Male' else 'أنثى')
+    bmi = st.number_input("مؤشر كتلة الجسم (BMI)", value=25.0)
+    blood_pressure = st.number_input("ضغط الدم", value=120)
+    glucose = st.number_input("مستوى الجلوكوز", value=100)
+    insulin = st.number_input("مستوى الإنسولين", value=15)
+
+with col2:
+    hba1c = st.number_input("مستوى HbA1c", value=5.5)
+    chol = st.number_input("الكوليسترول", value=180)
+    trig = st.number_input("الدهون الثلاثية", value=130)
+    activity = st.selectbox("مستوى النشاط البدني (0-3)", options=[0, 1, 2, 3])
+    calories = st.number_input("السعرات اليومية", value=2000)
+    sugar = st.number_input("كمية السكر اليومية", value=30)
+
+with col3:
+    sleep = st.number_input("ساعات النوم", value=7)
+    stress = st.number_input("مستوى التوتر (1-10)", value=5)
+    family = st.selectbox("تاريخ العائلة مع السكري", options=['Yes', 'No'], format_func=lambda x: 'نعم' if x == 'Yes' else 'لا')
+    waist = st.number_input("محيط الخصر (سم)", value=85)
+    score = st.number_input("درجة خطر سابقة", value=50)
+
+st.markdown("---")
+
+if st.button("توقع النتيجة الآن"):
+    g_enc = 1 if gender == 'Male' else 0
+    f_enc = 1 if family == 'Yes' else 0
     
-    # عمل Scaling للبيانات الجديدة
-    input_scaled = scaler.transform(input_data)
+    # إرسال الـ 17 قيمة للموديل
+    data = [[age, g_enc, bmi, blood_pressure, glucose, insulin, hba1c, chol, trig, 
+             activity, calories, sugar, sleep, stress, f_enc, waist, score]]
     
-    # التوقع
-    prediction = model.predict(input_scaled)
+    pred = model.predict(data)[0]
+    res = result_map.get(pred, pred)
     
-    # عرض النتيجة
-    st.subheader(f"The predicted category is: {prediction[0]}")
-    
-    if "High" in str(prediction[0]):
-        st.error("Warning: High Risk detected. Please consult a doctor.")
-    else:
-        st.success("Safe: Low Risk or Prediabetes detected.")
+    st.info("نتيجة التحليل:")
+    st.subheader(f"التوقع هو: {res}")
